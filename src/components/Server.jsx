@@ -5,8 +5,8 @@ let token = null
 
 //user request functions
 
-function setToken(user) {
-    token = `Bearer ${user.token}`
+function setToken(userToken) {
+    token = `Bearer ${userToken}`
 }
 
 const userLogin = async (userCredentials) => {
@@ -33,4 +33,4 @@ const addBlog = async (blog) => {
     return req.data;
 }
 
-export default { getAllblogs, deleteBlog, addBlog, userLogin };
+export default { getAllblogs, deleteBlog, addBlog, userLogin, setToken };
