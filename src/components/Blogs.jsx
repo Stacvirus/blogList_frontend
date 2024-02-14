@@ -3,11 +3,12 @@ import Item from "./BlogItem";
 import AddBlog from "./AddBlog";
 import serverData from './Server';
 import LoginForm from "./Login";
+import Notification from "./Notifications";
 
 function Blogs() {
     const [blogs, setBlogs] = useState();
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(null);
+    const [notTxt, setNotTxt] = useState();
 
     //useeffect to fetch all blogs at init period
     useEffect(fetchBlogs, []);
@@ -25,7 +26,6 @@ function Blogs() {
     function fetchBlogs() {
         serverData.getAllblogs()
             .then(res => {
-                console.log(res)
                 setBlogs(res);
             })
     }
@@ -36,8 +36,21 @@ function Blogs() {
     }
 
     const handleSaveBlogs = async (blogObject) => {
-        await serverData.addBlog(blogObject);
-        fetchBlogs();
+        try {
+            await serverData.addBlog(blogObject);
+            fetchBlogs();
+            setNotTxt({
+                text: `new blog created, ${blogObject.title}`,
+                clr: 'green'
+            })
+            removeNofication();
+        } catch (error) {
+            setNotTxt({
+                text: `${error.response.data.error}`,
+                clr: 'red'
+            })
+            removeNofication();
+        }
     }
 
     const handleLogin = async (userInfos) => {
@@ -45,10 +58,11 @@ function Blogs() {
             const userToken = (await serverData.userLogin(userInfos));
             window.localStorage.setItem('loggedInUser', JSON.stringify(userToken));
             setUser(userToken);
-            setToken(userToken.token);
             serverData.setToken(userToken.token);
         } catch (error) {
-            console.error('login failed!');
+            console.error(error.message);
+            setNotTxt({ text: error.response.data.error, clr: 'red' });
+            removeNofication();
             setUser(null)
         }
     }
@@ -61,8 +75,28 @@ function Blogs() {
         return <AddBlog Save={handleSaveBlogs} />
     }
 
+    function handleLogout() {
+        window.localStorage.removeItem('loggedInUser');
+    }
+
+    function showNotification({ text, clr }) {
+        return (
+            <Notification text={text} color={clr} />
+        )
+    }
+
+    function removeNofication() {
+        setTimeout(() => {
+            setNotTxt(null)
+        }, 2000);
+    }
+
     return (
         <div>
+            {
+                notTxt && showNotification(notTxt)
+
+            }
             {!user && showLogin()}
             {user && showAddBlogs()}
             <h1>Blogs</h1>
@@ -71,6 +105,7 @@ function Blogs() {
                     blogs && blogs.map(b => <Item key={b.id} blog={b} deleteItem={handleDelete} />)
                 }
             </ul>
+            <button onClick={handleLogout}>logout</button>
         </div>
     )
 }
