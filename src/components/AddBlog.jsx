@@ -47,7 +47,7 @@ function AddBlog({ Save }) {
                 /><br />
                 likes
                 <input
-                    type="text"
+                    type="number"
                     name="likes"
                     value={blogInfos.likes}
                     onChange={({ target }) => setBlogInfos({ ...blogInfos, likes: target.value })}

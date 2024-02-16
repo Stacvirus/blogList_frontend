@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
-import Item from "./BlogItem";
-import AddBlog from "./AddBlog";
+import { useEffect, useState, useRef } from 'react';
+import Item from './BlogItem';
+import AddBlog from './AddBlog';
 import serverData from './Server';
-import LoginForm from "./Login";
-import Notification from "./Notifications";
+import LoginForm from './Login';
+import Notification from './Notifications';
+import Togglable from './Togglable';
 
 function Blogs() {
     const [blogs, setBlogs] = useState();
     const [user, setUser] = useState(null);
     const [notTxt, setNotTxt] = useState();
 
+    const blogFormRef = useRef();
+    const loginFormRef = useRef();
     //useeffect to fetch all blogs at init period
     useEffect(fetchBlogs, []);
 
@@ -26,12 +29,12 @@ function Blogs() {
     function fetchBlogs() {
         serverData.getAllblogs()
             .then(res => {
-                setBlogs(res);
+                setBlogs(res.sort((a, b) => b.likes - a.likes));
             })
     }
 
     const handleDelete = async (item) => {
-        await serverData.deleteBlog(item);
+        window.confirm(`Remove blog: ${item.title}, by ${item.author}`) && await serverData.deleteBlog(item.id);
         fetchBlogs();
     }
 
@@ -44,6 +47,7 @@ function Blogs() {
                 clr: 'green'
             })
             removeNofication();
+            blogFormRef.current.handleVisibility();
         } catch (error) {
             setNotTxt({
                 text: `${error.response.data.error}`,
@@ -59,6 +63,7 @@ function Blogs() {
             window.localStorage.setItem('loggedInUser', JSON.stringify(userToken));
             setUser(userToken);
             serverData.setToken(userToken.token);
+            loginFormRef.current.handleVisibility();
         } catch (error) {
             console.error(error.message);
             setNotTxt({ text: error.response.data.error, clr: 'red' });
@@ -91,21 +96,31 @@ function Blogs() {
         }, 2000);
     }
 
+    const handleLikes = async (targetBlog) => {
+        const newBlog = { ...targetBlog, likes: targetBlog.likes += 1 };
+        await serverData.updateBlog(newBlog);
+        fetchBlogs();
+    }
+
     return (
         <div>
             {
-                notTxt && showNotification(notTxt)
-
+                user && <div>
+                    <span>{user.username} logged in</span><button onClick={handleLogout}>logout</button>
+                </div>
             }
-            {!user && showLogin()}
-            {user && showAddBlogs()}
+            {notTxt && showNotification(notTxt)}
+            <Togglable btnLable='login' ref={loginFormRef}>
+                {!user && showLogin()}
+            </Togglable>
+
+            <Togglable btnLable='new blogs' ref={blogFormRef}>
+                {user && showAddBlogs()}
+            </Togglable>
             <h1>Blogs</h1>
             <ul>
-                {
-                    blogs && blogs.map(b => <Item key={b.id} blog={b} deleteItem={handleDelete} />)
-                }
+                {blogs && blogs.map(b => <Item key={b.id} blog={b} deleteItem={handleDelete} addLikes={handleLikes} user={user && user.username} />)}
             </ul>
-            <button onClick={handleLogout}>logout</button>
         </div>
     )
 }
